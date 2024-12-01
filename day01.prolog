@@ -1,6 +1,7 @@
 :- set_prolog_flag(double_quotes, chars).
 :- use_module(library(strings)).
 :- use_module(library(occurs)).
+:- use_module(library(dcg/basics)).
 
 % How to test:
 %   test_input(Input), part1(Input, Answer).
@@ -13,6 +14,8 @@ test_input(X) :-
 				 |3   9
 				 |3   3|}.
 
+
+%%%%% Original string parser
 % The first number in string S is N
 left_number(S, N) :-
 		% S contains parts divided by whitespaces
@@ -35,20 +38,24 @@ left_numbers(Ls, Ns) :-
 right_numbers(Ls, Ns) :-
 		maplist(right_number, Ls, Ns).
 		
+%%%%% Alternative approach: use DCG for parsing
+% Input is two lists of integers, collected line by line
+input([], []) --> eol, !.
+input([A | As], [B | Bs]) --> input_line(A, B), input(As, Bs).
+% Each line contains elements from left and right list separated by whitespace
+input_line(A, B) --> integer(A), whites, integer(B), eol.
 
+
+%%%%% Part 1
 % Distance between two numbers
 distance(A, B, Distance) :-
 		Distance is abs(A - B).
 
 % Input is a big string containing all input data.
-part1(Input, Answer) :-
-		% Input consists of lines
-		string_lines(Input, Lines),
-		% Input has first list of numbers, which can be sorted
-		% (msort is used instead of sort, to avoid removing duplicates).
-		left_numbers(Lines, Ns1), msort(Ns1, Sorted1),
-		% Input has second list of numbers, which can be sorted.
-		right_numbers(Lines, Ns2), msort(Ns2, Sorted2),
+part1(Lefts, Rights, Answer) :-
+		% Input lists can be sorted (using msort instead of sort, to avoid removing
+		% duplicates).
+		msort(Lefts, Sorted1), msort(Rights, Sorted2),
 		% We calculate the distance between paired list elements (smallest with
 		% smallest, etc).
 		maplist(distance, Sorted1, Sorted2, Distances),
@@ -63,7 +70,7 @@ exec_part1(Path, Answer) :-
 		part1(Input, Answer).
 
 
-%%%%% Part 2 %%%%
+%%%%% Part 2
 
 % The Score is based on the value of the number X and the number of times it
 % appears in the list of numbers Ns.
@@ -79,18 +86,21 @@ repeat(X, N, [X | Xs]) :-
 		N1 is N - 1,
 		repeat(X, N1, Xs).
 
-part2(Input, Answer) :-
-		% Input consists of lines
-		string_lines(Input, Lines),
-		% Input consists of two lists of numbers
-		left_numbers(Lines, Lefts),
-		right_numbers(Lines, Rights),
+% Calculate the answer for list of Lefts and Rights
+part2(Lefts, Rights, Answer) :-
 		% We have a list of Scores which has a score for each element of left list.
 		length(Lefts, Len),
 		repeat(Rights, Len, RightsN),
 		maplist(number_score, Lefts, RightsN, Scores),
 		sum_list(Scores, Answer).
 
-exec_part2(Path, Answer) :-
-		read_file_to_string(Path, Input, []),
-		part2(Input, Answer).
+% Executors
+exec(part1, Path, Answer) :-
+		phrase_from_file(input(Lefts, Rights), Path),
+		part1(Lefts, Rights, Answer).
+										 
+exec(part2, Path, Answer) :-
+		phrase_from_file(input(Lefts, Rights), Path),
+		part2(Lefts, Rights, Answer).
+
+
