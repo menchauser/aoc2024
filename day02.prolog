@@ -32,3 +32,20 @@ safe_decrease([X | [Y | Xs]]) :-
 		safe_decrease(X, Y),
 		safe_decrease([Y | Xs]).
 
+%% States that N of the Reports are safe (increasing or decreasing).
+safe_report(R) :- safe_increase(R).
+safe_report(R) :- safe_decrease(R).
+
+input_has_safe_reports([], 0).
+input_has_safe_reports([R | Rs], N) :-
+		safe_report(R),
+		input_has_safe_reports(Rs, N1),
+		N is N1 + 1.
+input_has_safe_reports([_ | Rs], N) :-
+		input_has_safe_reports(Rs, N).
+
+part1(Reports, Answer) :- input_has_safe_reports(Reports, Answer).
+
+exec(Part, Path, Answer) :-
+		phrase_from_file(reports(Reports), Path),
+		call(Part, Reports, Answer).
