@@ -20,22 +20,18 @@ safe_increase(X, Y) :-
 safe_decrease(X, Y) :-
 		X > Y, D is (X - Y), between(1, 3, D).
 
-safe_increase([]).
-safe_increase([_]).
-safe_increase([X | [Y | Xs]]) :-
-		safe_increase(X, Y),
-		safe_increase([Y | Xs]).
+% Numbers in report are increasing monotonically in one direction with limited
+% step.
+safe_report_vals([_], _).
+safe_report_vals([X, Y | Xs], increase) :-
+		X < Y, D is (Y - X), between(1, 3, D),
+		safe_report_vals([Y | Xs], increase).
+safe_report_vals([X, Y | Xs], decrease) :-
+		X > Y, D is (X - Y), between(1, 3, D),
+		safe_report_vals([Y | Xs], decrease).
+safe_report(R) :- safe_report_vals(R, _).
 
-safe_decrease([]).
-safe_decrease([_]).
-safe_decrease([X | [Y | Xs]]) :-
-		safe_decrease(X, Y),
-		safe_decrease([Y | Xs]).
-
-%% States that N of the Reports are safe (increasing or decreasing).
-safe_report(R) :- safe_increase(R).
-safe_report(R) :- safe_decrease(R).
-
+% N of the Reports are safe (increasing or decreasing).
 input_has_safe_reports(_, [], 0).
 input_has_safe_reports(ReportChecker, [R | Rs], N) :-
 		call(ReportChecker, R),
