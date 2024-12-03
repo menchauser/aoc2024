@@ -30,7 +30,6 @@ execute([mul(A, B) | Rest], N) :-
 execute([_ | Rest], N) :- execute(Rest, N).
 
 
-
 %! execute_with_conds(MulsEnabled, Prog, Result)
 %  Execute a program considering conditionals.
 execute_with_conds(_, [], 0).
