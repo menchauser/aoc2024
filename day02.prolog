@@ -1,7 +1,7 @@
 :- set_prolog_flag(double_quotes, chars).
 :- use_module(library(dcg/basics)).
 :- use_module(library(pio)).
-% :- use_module(library(clpfd)).
+
 
 %%%%% DCG to read list of lists of integers
 % Input is a list of reports.
@@ -12,7 +12,6 @@ reports([R | Rs]) --> report(R), reports(Rs).
 report([]) --> eol, !.
 report([X | Xs]) --> integer(X), whites, report(Xs).
 
-% Pair of numbers is increased and only with given step boundaries.
 safe_increase(X, Y) :-
 		X < Y, D is (Y - X), between(1, 3, D).
 
@@ -40,27 +39,21 @@ input_has_safe_reports(ReportChecker, [R | Rs], N) :-
 input_has_safe_reports(ReportChecker, [_ | Rs], N) :-
 		input_has_safe_reports(ReportChecker, Rs, N).
 
-part1(Reports, Answer) :- input_has_safe_reports(safe_report, Reports, Answer).
+part1(Reports, Answer) :-
+		input_has_safe_reports(safe_report, Reports, Answer).
 
 %% For part 2, if report is unsafe we should additionally check if it becomes
 %% safe by removing any element.
 
-% States that List2 is a List1 with one element removed
-fixed_list([L | Ls], [L | Ns]) :- fixed_list(Ls, Ns).
-fixed_list([_ | Ls], Ls).
-
 % Now we have to make sure that input has safe reports either for original list
 % or for fixed lists.
-safe_report_2(R) :- safe_increase(R).
-safe_report_2(R) :- safe_decrease(R).
+safe_report_2(R) :- safe_report(R).
 safe_report_2(R) :-
-		fixed_list(R, FixedR),
-		safe_increase(FixedR).
-safe_report_2(R) :-
-		fixed_list(R, FixedR),
-		safe_decrease(FixedR).
-		
-part2(Reports, Answer) :- input_has_safe_reports(safe_report_2, Reports, Answer).
+		select(_, R, FixedR), % Select asserts that FixedR is R without a single element
+		safe_report(FixedR).
+
+part2(Reports, Answer) :-
+		input_has_safe_reports(safe_report_2, Reports, Answer).
 
 exec(Part, Path, Answer) :-
 		phrase_from_file(reports(Reports), Path),
