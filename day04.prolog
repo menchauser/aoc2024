@@ -13,7 +13,7 @@ input([]) --> eol, !.
 input([Cs | Ls]) --> string(S), { string_chars(S, Cs) }, eol, input(Ls).
 
 
-%! chars_has_xmases(+Cs, -N)
+%! chars_has_xmases(+Cs, -N).
 %  Input list of chars Cs contains pattern "XMAS" N times when scanning in
 %  forward direction.
 chars_has_xmases_forward([], 0).
@@ -23,7 +23,7 @@ chars_has_xmases_forward(['X', 'M', 'A', 'S' | Rest], N) :-
 chars_has_xmases_forward([_ | Rest], N) :-
 		chars_has_xmases_forward(Rest, N).
 
-%! chars_has_xmases(+Cs, -N)
+%! chars_has_xmases(+Cs, -N).
 %  Input list of chars Cs contains pattern "XMAS" N times when scanning in both
 %  forward and backward directions.
 chars_has_xmases(Input, N) :-
@@ -32,35 +32,27 @@ chars_has_xmases(Input, N) :-
 		chars_has_xmases_forward(Reversed, N2),
 		N is N1 + N2.
 
+%! matrix_elements(Matrix, I, J, MaxI, MaxJ, StepI, StepJ, Elements).
+%  Elements contains a list of elements of matrix Matrix, starting at
+%  coordinates (I, J), going with step of StepI, StepJ until reached the max
+%  boundaries.
+matrix_elements(Input, I, J, MaxI, MaxJ, StepI, StepJ, [E|Es]) :-
+		I =< MaxI, J =< MaxJ,
+		nth1(I, Input, Row), nth1(J, Row, E),
+		I1 is I + StepI, J1 is J + StepJ,
+		matrix_elements(Input, I1, J1, MaxI, MaxJ, StepI, StepJ, Es).
+matrix_elements(_, _, _, _, _, _, _, []).
 
-%! left_diagonal(Input, N, Diagonal).
-%  Select Nth left diagonal of the Input matrix. Left diagonal is stretched from
-%  top-left to bottom-right. 
-%  Example:
-%    1  2  3  4
-%    5  6  7  8
-%    9 10 11 12
-%   13 14 15 16
-%  1st left diagonal: 13
-%  3rd left diagonal: 5 10 15
-left_diagonal([_ | Rest], N, Diagonal) :- fail.
-		% we skip (Length - N) rows and then try to work it
-		% we need to make sure that value at the coordinates (N, N - i) is 
-
-
-%! left_diagonal_part(Input, ColNum, Diagonal).
-%  Input is a matrix in the form of list of lists. Diagonal is diagonal of
-%  elements in that matrix starting from column ColNum in the first row.
-left_diagonal_part([], _, []).
-left_diagonal_part([Row | _], ColNum, []) :- 
-		length(Row, N),
-		ColNum > N.
-left_diagonal_part([Row | RestRows], ColNum, [D | Ds]) :-
-		length(Row, N),
-		ColNum =< N,
-		nth1(ColNum, Row, D),
-		C1 is ColNum + 1,
-		left_diagonal_part(RestRows, C1, Ds).
+%! matrix_diagonal(Matrix, Diagonal).
+%  Diagonal is one of the Matrix's diagonals.
+%  Diagonals contains a list in which every vector is a diagonal of a
+%  Matrix. All of them together has all elements of Matrix.
+matrix_diagonal([], []).
+matrix_diagonal(Matrix, Diagonal) :-
+		length(Matrix, NumRows),
+		nth1(1, Matrix, Row), length(Row, NumCols),
+		between(1, NumRows, I),
+		matrix_elements(Matrix, I, 1, NumRows, NumCols, 1, 1, Diagonal).
 
 % Now we want to build all possible diagonals and calculate xmases in them.
 % Going by each row we 
@@ -73,6 +65,10 @@ input_has_xmases(Input, N) :-
 		% How many xmases in every col.
 		transpose(Input, Transposed),
 		maplist(chars_has_xmases, Transposed, N2), sum_list(N2, VerticalXmasCount),
+		% How many xmases in every diagonal.
+		length(Input, Len),
+		between(1, Len, Position),
+		
 		N is HorizontalXmasCount + VerticalXmasCount.
 		
 
