@@ -5,6 +5,10 @@
 part1(Matrix, Answer) :-
 		input_has_xmases(Matrix, Answer).
 
+part2(Matrix, Answer) :-
+		findall([Row, Col], has_mas_pattern(Matrix, Row, Col), Coords),
+		length(Coords, Answer).
+
 exec(Part, Path, Answer) :-
 		phrase_from_file(input(Matrix), Path),
 		call(Part, Matrix, Answer).
@@ -110,6 +114,16 @@ input_has_xmases(Input, N) :-
 		N is HorizontalXmasCount + VerticalXmasCount + NormDiagXmasCount.
 
 
+% Part 2
+% We have X-MAS if we start from center and go around clockwise
+%  2 3
+%   1
+%  4 5
+is_mas_pattern('A', 'M', 'M', 'S', 'S').
+is_mas_pattern('A', 'M', 'S', 'S', 'M').
+is_mas_pattern('A', 'S', 'S', 'M', 'M').
+is_mas_pattern('A', 'S', 'M', 'M', 'S').
+
 %! has_mas_pattern(Matrix, Row, Col)
 %  Does Matrix has the X-MAS pattern with the center letter A at (Row, Col)? 
 has_mas_pattern(Matrix, Row, Col) :-
@@ -118,13 +132,15 @@ has_mas_pattern(Matrix, Row, Col) :-
 		length(FirstRow, ColNum), MaxCol is ColNum - 1,
 
 		between(2, MaxRow, Row), between(2, MaxCol, Col),
-
+		% A pattern: start from the center and go around clockwise
+		%  2 3
+		%   1
+		%  4 5
 		PrevRow is Row - 1, NextRow is Row + 1,
 		PrevCol is Col - 1, NextCol is Col + 1,
 		nth1(PrevRow, Matrix, R1), nth1(Row, Matrix, R2), nth1(NextRow, Matrix, R3),
-		% format("Row nums: ~w, ~w, ~w~n", [PrevRow, Row, NextRow]),
-		% format("Col nums: ~w, ~w, ~w~n", [PrevCol, Col, NextCol]),
-		% format("~w~n~w~n~w~n", [R1, R2, R3]),
-		nth1(PrevCol, R1, 'M'), nth1(NextCol, R1, 'S'),
-		nth1(Col, R2, 'A'),
-		nth1(PrevCol, R3, 'M'), nth1(NextCol, R3, 'S').
+		nth1(Col, R2, X1),
+		nth1(PrevCol, R1, X2), nth1(NextCol, R1, X3),
+		nth1(NextCol, R3, X4), nth1(PrevCol, R3, X5),
+		is_mas_pattern(X1, X2, X3, X4, X5).
+
