@@ -7,8 +7,8 @@
 
 
 % Input data - just a matrix of characters
-input(Map) :- sequence(map_row, "\n", Map).
-map_row(Row) :- string_without("\n", S), { string_chars(S, Row) }.
+input(Map) --> sequence(map_row, "\n", Map).
+map_row(Row) --> string_without("\n", S), { string_chars(S, Row) }.
 
 format_map(Map) :-
 		maplist([Chars,_]>>format("~s~n", [Chars]), Map, _).
@@ -28,10 +28,6 @@ matrix_size(Matrix, Height, Width) :-
 		nth1(1, Matrix, Row),
 		length(Row, Width).
 
-% TODO: find initial position and replace it
-% map_parameters(Map, Height, Row, CleanedMap, State, [X, Y]) :-
-% 		matrix_size(Map, Height, Row),
-
 % We want to make some state machine, which builds a next step based on map.
 
 % What we want to achieve is to get next position and state from the current
@@ -50,7 +46,7 @@ step(Map, [X1, Y1], S1, [X2, Y2], S2) :-
 		% Step in that position
 		step_(Map, Height, Width, [X1, Y1], [X1_, Y1_], S1, [X2, Y2], S2).
 
-
+% "Direction" and "State" are synonyms
 %! step_(+Map, +Height, +Width, +OldPos:list, +NewPos:list, +S1, -Pos, -S2).
 %  Performs calculation of a new state S2 based on old position, candidate new
 %  position, state and size of the map.
@@ -59,9 +55,11 @@ step_(  _, Height,     _,            _, [NewX, NewY],  _, [NewX, NewY], '0') :-
 		\+ between(1, Height, NewX).
 step_(  _,      _, Width,            _, [NewX, NewY],  _, [NewX, NewY], '0') :-
 		\+ between(1, Width, NewY).
-% If next position is on field - state remains, position is updated.
+% If next position is on field or initial state '^' - state remains, position is updated.
 step_(Map,     _,      _,            _, [NewX, NewY], S1, [NewX, NewY], S1) :-
 		nth11(NewX, NewY, Map, '.').
+step_(Map,     _,      _,            _, [NewX, NewY], S1, [NewX, NewY], S1) :-
+		nth11(NewX, NewY, Map, '^').
 % If next position is obstacle - state is rotated to the right, position remains.
 step_(Map,     _,      _, [OldX, OldY], [NewX, NewY], S1, [OldX, OldY],  S2) :-
 		nth11(NewX, NewY, Map, '#'),
@@ -78,3 +76,16 @@ next_coords(X1, Y1, '^', X2, Y1) :- X2 is X1 - 1.
 next_coords(X1, Y1, 'v', X2, Y1) :- X2 is X1 + 1.
 next_coords(X1, Y1, '>', X1, Y2) :- Y2 is Y1 + 1.
 next_coords(X1, Y1, '<', X1, Y2) :- Y2 is Y1 - 1.
+
+%! map_path_length(+Map, -Length).
+map_path_length(Map, Length) :-
+		% Find initial position on the map. We expect initial duration to always be '^'.
+		nth11(X, Y, Map, '^'),
+		map_path_length_(Map, X, Y, '^', Length).
+
+%! map_path_length_(+Map, +Height, +Width, +X, +Y, +Dir, -Length) 
+map_path_length_(_  , _, _, '0',      _).
+map_path_length_(Map, X, Y, Dir, Length) :-
+		step(Map, [X, Y], Dir, [NextX, NextY], NextDir),
+		map_path_length_(Map, NextX, NextY, NextDir, L1),
+		Length is L1 + 1.
