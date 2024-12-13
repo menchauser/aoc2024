@@ -34,6 +34,13 @@ matrix_size(Matrix, Height, Width) :-
 		nth1(1, Matrix, Row),
 		length(Row, Width).
 
+%! replace(List, Index, Value, NewList)
+%  NewList is a List with value at index Index replaced with Value. Index starts
+%  from 1.
+replace([_ | T], 1, X, [X | T]).
+replace([H | T], I, X, [H | R]) :- I > 0, I1 is I - 1, replace(T, I1, X, R), !.
+replace(L, _, _, L).
+
 % We want to make some state machine, which builds a next step based on map.
 
 % What we want to achieve is to get next position and state from the current
@@ -68,7 +75,7 @@ step_(Map,     _,      _,            _, [NewX, NewY], S1, [NewX, NewY], S1, 1) :
 step_(Map,     _,      _,            _, [NewX, NewY], S1, [NewX, NewY], S1, 1) :-
 		nth11(NewX, NewY, Map, '^').
 % If next position is obstacle - state is rotated to the right, position remains.
-step_(Map, Height, Width, [OldX, OldY], [NewX, NewY], S1, [OldX, OldY],  S2, 0) :-
+step_(Map, _Height, _Width, [OldX, OldY], [NewX, NewY], S1, [OldX, OldY],  S2, 0) :-
 		nth11(NewX, NewY, Map, '#'),
 		rotate_state(S1, S2).
 
@@ -93,10 +100,48 @@ map_path(Map, Path) :-
 		map_path_(Map, '^', [[X, Y]], Path).
 
 %! map_path_(+Map, +Dir:char, PathAcc:list, FinalPath:list) 
-map_path_(_  , '0', [H | Rest], FinalPath) :- reverse(Rest, FinalPath).
+map_path_(_  , '0', [_ | Rest], FinalPath) :- reverse(Rest, FinalPath).
 map_path_(Map, Dir, [[X, Y] | RestPath], FinalPath) :-
-		step(Map, [X, Y], Dir, [NextX, NextY], NextDir, Dist),
+		step(Map, [X, Y], Dir, [NextX, NextY], NextDir, _Dist),
 		% DX is abs(X - NextX), DY is abs(Y - NextY),
 		% format("(X,Y)=( ~d, ~d), (NX,NY)=( ~d, ~d), DX=~d, DY=~d, Dist=~d~n",
 		%			 [X, Y, NextX, NextY, DX, DY, Dist]),
 		map_path_(Map, NextDir, [[NextX, NextY], [X, Y] | RestPath], FinalPath).
+
+
+% To solve part 2 we need a way to detect a loop. To do that we can go into a
+% path saving all previous states as (X, Y, Dir). If we are in the same
+% coordinates with the same direction: we are in a loop. If we managed to get
+% out of the map + we are not in a loop.
+% So, let's try copying our map_path, but with loop detector.
+
+% We also have to generate all possible maps with obstacles at Row, Col.
+
+%! map_with_obstacle(Map, Row, Col, NewMap).
+%  True is NewMap is a map with obstacle at Row, Col. Solving fails if obstacle
+%  cannot be placed there (it already exists at that place).
+map_with_obstacle(Map, Row, Col, NewMap) :-
+		matrix_size(Map, Rows, Cols),
+		between(1, Rows, Row),
+		between(1, Cols, Col),
+		\+ nth11(Row, Col, Map, '#'),
+		nth1(Row, Map, RowData),
+		replace(RowData, Col, '#', NewRowData),
+		replace(Map, Row, NewRowData, NewMap).
+
+%! map_loops(Map).
+%  True if guard loops on the map.
+map_loops(Map) :-
+		nth11(X, Y, Map, '^'),
+		map_loops_(Map, '^', [[X, Y]]).
+
+%! map_loops_(Map, Dir, PathAcc).
+map_loops_(_, '0', _) :- false.
+map_loops_(Map, Dir, [[X, Y] | RestPath]) :-
+		step(Map, [X, Y], Dir, [NextX, NextY], NextDir, _Dist),
+		memberchk([NextX, NextY], RestPath).
+map_loops_(Map, Dir, [[X, Y] | RestPath]) :-
+		step(Map, [X, Y], Dir, [NextX, NextY], NextDir, _Dist),
+		map_loops_(Map, NextDir, [[NextX, NextY], [X, Y] | RestPath]).
+
+% now just find all obstacle maps which cause loop
