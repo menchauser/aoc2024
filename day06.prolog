@@ -7,11 +7,11 @@
 
 
 % Input data - just a matrix of characters
-input(Map) --> sequence(map_row, "\n", Map).
-map_row(Row) --> string_without("\n", S), { string_chars(S, Row) }.
+input(Map) --> sequence(map_row, "\n", Rows), eos, { exclude(=([]), Rows, Map) }.
+map_row(Row) --> string_without("\n", S), { S \= "", string_chars(S, Row) }.
 
 format_map(Map) :-
-		maplist([Chars,_]>>format("~s~n", [Chars]), Map, _).
+		maplist([Chars,_]>>format("'~s'~n", [Chars]), Map, _).
 
 
 % Utilities
@@ -39,29 +39,30 @@ matrix_size(Matrix, Height, Width) :-
 %  new position and direction are defined by NextPos, NextDir.
 %  If, after the step, the guard stepped out of the map, its state is changed to
 %  '0' (blank).
-step(Map, [X1, Y1], S1, [X2, Y2], S2) :-
+step(Map, [X1, Y1], S1, [X2, Y2], S2, Dist) :-
 		matrix_size(Map, Height, Width),
 		% Obtain candidate coordinates for the next position
 		next_coords(X1, Y1, S1, X1_, Y1_),
 		% Step in that position
-		step_(Map, Height, Width, [X1, Y1], [X1_, Y1_], S1, [X2, Y2], S2).
+		step_(Map, Height, Width, [X1, Y1], [X1_, Y1_], S1, [X2, Y2], S2, Dist).
 
 % "Direction" and "State" are synonyms
-%! step_(+Map, +Height, +Width, +OldPos:list, +NewPos:list, +S1, -Pos, -S2).
+%! step_(+Map, +Height, +Width, +OldPos:list, +NewPos:list, +S1, -Pos, -S2, -Distance).
 %  Performs calculation of a new state S2 based on old position, candidate new
-%  position, state and size of the map.
+%  position, state and size of the map. Distance is also calculated: it may be 0
+%  if we just rotated.
 % Stepping outside of map causes blank state '0'.
-step_(  _, Height,     _,            _, [NewX, NewY],  _, [NewX, NewY], '0') :-
+step_(  _, Height,     _,            _, [NewX, NewY],  _, [NewX, NewY], '0', 0) :-
 		\+ between(1, Height, NewX).
-step_(  _,      _, Width,            _, [NewX, NewY],  _, [NewX, NewY], '0') :-
+step_(  _,      _, Width,            _, [NewX, NewY],  _, [NewX, NewY], '0', 0) :-
 		\+ between(1, Width, NewY).
 % If next position is on field or initial state '^' - state remains, position is updated.
-step_(Map,     _,      _,            _, [NewX, NewY], S1, [NewX, NewY], S1) :-
+step_(Map,     _,      _,            _, [NewX, NewY], S1, [NewX, NewY], S1, 1) :-
 		nth11(NewX, NewY, Map, '.').
-step_(Map,     _,      _,            _, [NewX, NewY], S1, [NewX, NewY], S1) :-
+step_(Map,     _,      _,            _, [NewX, NewY], S1, [NewX, NewY], S1, 1) :-
 		nth11(NewX, NewY, Map, '^').
 % If next position is obstacle - state is rotated to the right, position remains.
-step_(Map,     _,      _, [OldX, OldY], [NewX, NewY], S1, [OldX, OldY],  S2) :-
+step_(Map, Height, Width, [OldX, OldY], [NewX, NewY], S1, [OldX, OldY],  S2, 0) :-
 		nth11(NewX, NewY, Map, '#'),
 		rotate_state(S1, S2).
 
@@ -84,8 +85,11 @@ map_path_length(Map, Length) :-
 		map_path_length_(Map, X, Y, '^', Length).
 
 %! map_path_length_(+Map, +Height, +Width, +X, +Y, +Dir, -Length) 
-map_path_length_(_  , _, _, '0',      _).
+map_path_length_(_  , _, _, '0',      0).
 map_path_length_(Map, X, Y, Dir, Length) :-
-		step(Map, [X, Y], Dir, [NextX, NextY], NextDir),
+		step(Map, [X, Y], Dir, [NextX, NextY], NextDir, Dist),
+		DX is abs(X - NextX), DY is abs(Y - NextY),
+		format("(X,Y)=( ~d, ~d), (NX,NY)=( ~d, ~d), DX=~d, DY=~d, Dist=~d~n",
+					 [X, Y, NextX, NextY, DX, DY, Dist]),
 		map_path_length_(Map, NextX, NextY, NextDir, L1),
-		Length is L1 + 1.
+		Length is L1 + Dist.
