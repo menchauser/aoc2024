@@ -6,6 +6,12 @@
 :- use_module(library(yall)).
 
 
+part1(Map, Answer) :-
+		map_path(Map, Path),
+		sort(Path, DistinctPositions),
+		length(DistinctPositions, Answer).
+
+
 % Input data - just a matrix of characters
 input(Map) --> sequence(map_row, "\n", Rows), eos, { exclude(=([]), Rows, Map) }.
 map_row(Row) --> string_without("\n", S), { S \= "", string_chars(S, Row) }.
@@ -78,18 +84,19 @@ next_coords(X1, Y1, 'v', X2, Y1) :- X2 is X1 + 1.
 next_coords(X1, Y1, '>', X1, Y2) :- Y2 is Y1 + 1.
 next_coords(X1, Y1, '<', X1, Y2) :- Y2 is Y1 - 1.
 
-%! map_path_length(+Map, -Length).
-map_path_length(Map, Length) :-
-		% Find initial position on the map. We expect initial duration to always be '^'.
+%! map_path(+Map:list, -Path:list).
+%  Path is a full path from the starting position until going out of the Map
+%  bounds. 
+map_path(Map, Path) :-
+		% Find initial position on the map. Initial direction is always '^'.
 		nth11(X, Y, Map, '^'),
-		map_path_length_(Map, X, Y, '^', Length).
+		map_path_(Map, '^', [[X, Y]], Path).
 
-%! map_path_length_(+Map, +Height, +Width, +X, +Y, +Dir, -Length) 
-map_path_length_(_  , _, _, '0',      0).
-map_path_length_(Map, X, Y, Dir, Length) :-
+%! map_path_(+Map, +Dir:char, PathAcc:list, FinalPath:list) 
+map_path_(_  , '0', [H | Rest], FinalPath) :- reverse(Rest, FinalPath).
+map_path_(Map, Dir, [[X, Y] | RestPath], FinalPath) :-
 		step(Map, [X, Y], Dir, [NextX, NextY], NextDir, Dist),
-		DX is abs(X - NextX), DY is abs(Y - NextY),
-		format("(X,Y)=( ~d, ~d), (NX,NY)=( ~d, ~d), DX=~d, DY=~d, Dist=~d~n",
-					 [X, Y, NextX, NextY, DX, DY, Dist]),
-		map_path_length_(Map, NextX, NextY, NextDir, L1),
-		Length is L1 + Dist.
+		% DX is abs(X - NextX), DY is abs(Y - NextY),
+		% format("(X,Y)=( ~d, ~d), (NX,NY)=( ~d, ~d), DX=~d, DY=~d, Dist=~d~n",
+		%			 [X, Y, NextX, NextY, DX, DY, Dist]),
+		map_path_(Map, NextDir, [[NextX, NextY], [X, Y] | RestPath], FinalPath).
