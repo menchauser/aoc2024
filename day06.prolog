@@ -133,15 +133,36 @@ map_with_obstacle(Map, Row, Col, NewMap) :-
 %  True if guard loops on the map.
 map_loops(Map) :-
 		nth11(X, Y, Map, '^'),
-		map_loops_(Map, '^', [[X, Y]]).
+		map_loops_(Map, '^', [[X, Y, '^']]).
 
 %! map_loops_(Map, Dir, PathAcc).
-map_loops_(_, '0', _) :- false.
-map_loops_(Map, Dir, [[X, Y] | RestPath]) :-
+%  If we've achieved '0' direction - we are not in loop, so it is false.
+map_loops_(_, '0', _) :- !, fail.
+map_loops_(Map, Dir, [[X, Y, Dir] | RestPath]) :-
 		step(Map, [X, Y], Dir, [NextX, NextY], NextDir, _Dist),
-		memberchk([NextX, NextY], RestPath).
-map_loops_(Map, Dir, [[X, Y] | RestPath]) :-
+		memberchk([NextX, NextY, NextDir], RestPath).
+map_loops_(Map, Dir, [[X, Y, Dir] | RestPath]) :-
 		step(Map, [X, Y], Dir, [NextX, NextY], NextDir, _Dist),
-		map_loops_(Map, NextDir, [[NextX, NextY], [X, Y] | RestPath]).
+		map_loops_(Map, NextDir, [[NextX, NextY, NextDir], [X, Y, Dir] | RestPath]).
 
-% now just find all obstacle maps which cause loop
+map_loops_with_obstacle(Map, Row, Col) :-
+		format("Check obstacle at ~d, ~d~n", [Row, Col]),
+		map_with_obstacle(Map, Row, Col, NewMap),
+		map_loops(NewMap).
+
+% Now find all possible obstacles.
+looping_obstacle_count(Map, N) :-
+		matrix_size(Map, Rows, Cols),
+		findall(
+				[Row, Col],
+				(
+						between(1, Rows, Row),
+						between(1, Cols, Col),
+						map_with_obstacle(Map, Row, Col, NewMap),
+						format("Check obstacle at ~d, ~d~n", [Row, Col]),
+						map_loops(NewMap)
+				),
+				GoodObstacles
+		),
+		writeln(GoodObstacles),
+		length(GoodObstacles, N).
