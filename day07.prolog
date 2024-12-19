@@ -28,28 +28,18 @@ optional_newline --> "\n" | [].
 %! valid_equation(Type, Result:integer, Numbers:list).
 %  True if Numbers could be combined with operators to produce the Result. Type
 %  can be 'simple' or 'ext' (to support || operator).
-valid_equation(_, R, [X, Y]) :-
-		% format('~w =:= ~w * ~w?~n', [R, X, Y]),
-		R =:= X * Y.
-valid_equation(_, R, [X, Y]) :-
-		% format('~w =:= ~w + ~w?~n', [R, X, Y]),
-		R =:= X + Y.
-valid_equation(ext, R, [X, Y]) :-
-		number_chars(X, C1), number_chars(Y, C2), append(C1, C2, C3), number_chars(D1, C3),
-		% format('~w =:= ~w || ~w?~n', [R, X, Y]),
-		R =:= D1.
-valid_equation(Type, R, [X, Y, Z | Rest]) :-
+valid_equation(_, R, [R]).
+valid_equation(Type, R, [X, Y | Rest]) :-
 		D1 is X * Y,
-		% format('~w =:= ~w * ~w .. ~w?~n', [R, X, Y, [Z | Rest]]),
-		valid_equation(Type, R, [D1, Z | Rest]).
-valid_equation(Type, R, [X, Y, Z | Rest]) :-
+		valid_equation(Type, R, [D1 | Rest]).
+valid_equation(Type, R, [X, Y | Rest]) :-
 		D1 is X + Y,
-		% format('~w =:= ~w + ~w .. ~w?~n', [R, X, Y, [Z | Rest]]),
-		valid_equation(Type, R, [D1, Z| Rest]).
-valid_equation(ext, R, [X, Y, Z | Rest]) :-
-		number_chars(X, C1), number_chars(Y, C2), append(C1, C2, C3), number_chars(D1, C3),
+		valid_equation(Type, R, [D1 | Rest]).
+valid_equation(ext, R, [X, Y | Rest]) :-
+		number_chars(X, C1),
+		number_chars(Y, C2),
+		append(C1, C2, C3),
 		number_chars(D1, C3),
-		% format('~w =:= ~w || ~w .. ~w?~n', [R, X, Y, [Z | Rest]]),
-		valid_equation(ext, R, [D1, Z| Rest]).
+		valid_equation(ext, R, [D1 | Rest]).
 
 valid_equation(Type, Result-Numbers) :- valid_equation(Type, Result, Numbers).
